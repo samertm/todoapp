@@ -16,3 +16,6 @@ type Person struct {
 	goalMinutes int
 	done        []task
 }
+
+type PersonStore map[string]Person
+
