@@ -3,10 +3,15 @@ package server
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"log"
 	"net/http"
 	_ "time"
+	_ "crypto/rand"
+	_ "math/big"
+	"encoding/json"
+
+	"github.com/samertm/todoapp/engine"
+	"io"
 )
 
 type session map[string]string
@@ -51,9 +56,26 @@ func handleLogin(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+var Todos []engine.Task
+
 func handleTodos(w http.ResponseWriter, req *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	io.WriteString(w, "[{\"status\": \"done\", \"name\": \"poopies\"}, {\"status\": \"done\", \"name\": \"my second task\"}]");
+	// start w/ global state
+	if req.Method == "GET" {
+		data, err := json.Marshal(Todos)
+		if err != nil {
+			fmt.Println(err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, string(data))
+	} else if req.Method == "POST" {
+		req.ParseForm()
+		data := req.PostForm
+		if len(data["status"]) != 0 &&
+			len(data["name"]) != 0 {
+			t := engine.NewTask(data["status"][0], data["name"][0])
+			Todos = append(Todos, t)
+		}
+	}
 }
 
 func ListenAndServe(addr string) {
