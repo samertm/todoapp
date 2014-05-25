@@ -74,6 +74,25 @@ func handleTasks(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handlePerson(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 {
+			// TODO log error
+			return
+		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		data, err := json.Marshal(p)
+		if err != nil {
+			fmt.Println(err)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		io.WriteString(w, string(data))
+	}
+}
+
 var Session = session.New()
 
 func ListenAndServe(addr string) {
@@ -83,6 +102,7 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/addtask", handleAddTask)
 	http.HandleFunc("/tasks", handleTasks)
+	http.HandleFunc("/person", handlePerson)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 	go Session.Run()
 	err := http.ListenAndServe(addr+port, nil)
