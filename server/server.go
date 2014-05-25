@@ -80,6 +80,7 @@ func handlePerson(w http.ResponseWriter, req *http.Request) {
 		form := req.PostForm
 		if len(form["session"]) == 0 {
 			// TODO log error
+			fmt.Println("handlePerson error")
 			return
 		}
 		Session.Get <- form["session"][0]
@@ -93,6 +94,20 @@ func handlePerson(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleSetUsername(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 ||
+			len(form["name"]) == 0 {
+			// TODO log error
+			fmt.Println("handleSetUsername error")
+			return
+		}
+		Session.Set <- session.Set{form["session"][0], form["name"][0]}
+	}
+}
+
 var Session = session.New()
 
 func ListenAndServe(addr string) {
@@ -103,6 +118,7 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/addtask", handleAddTask)
 	http.HandleFunc("/tasks", handleTasks)
 	http.HandleFunc("/person", handlePerson)
+	http.HandleFunc("/setusername", handleSetUsername)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 	go Session.Run()
 	err := http.ListenAndServe(addr+port, nil)

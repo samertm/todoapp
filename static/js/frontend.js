@@ -1,4 +1,66 @@
 /** @jsx React.DOM */
+var UserForm = React.createClass({
+    handleSubmit: function() {
+        var name = this.refs.name.getDOMNode().value.trim();
+        this.props.onUserSubmit({name: name});
+        this.refs.name.getDOMNode().value = '';
+        return false;
+    },
+    render: function() {
+        return (
+                <form className="userForm" onSubmit={this.handleSubmit}>
+                <input type="text" placeholder="name" ref="name" />
+                <input type="submit" value="set" />
+                </form>
+        );
+    }
+});
+var User = React.createClass({
+    getInitialState: function() {
+        return {person: {name: "nope"}};
+    },
+    handleUserSubmit: function(person) {
+        $.ajax({
+            url: this.props.setusername,
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession(), name: person.name},
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
+    loadPersonFromServer: function() {
+        $.ajax({
+            url: this.props.person,
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession()},
+            success: function(person) {
+                if (person.name === "") {
+                    this.setState({person: {name: "no"}});
+                } else {
+                    this.setState({person: person});
+                }
+            }.bind(this),
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },    
+    componentWillMount: function() {
+        this.loadPersonFromServer();
+        setInterval(this.loadPersonFromServer, this.props.pollInterval);
+    },
+    render: function() {
+        return (
+                <div className="user">
+                <h1>YOUR NAME IS {this.state.person.name}</h1>
+                <UserForm onUserSubmit={this.handleUserSubmit} />
+            </div>
+        );
+    }
+});
 var Todo = React.createClass({
     render: function() {
         return (
@@ -55,6 +117,8 @@ var TodoContainer = React.createClass({
             success: function(todos) {
                 if (todos !== null) {
                     this.setState({data: todos});
+                } else {
+                    this.setState({data: []});
                 }
             }.bind(this),
             error: function(xhr, status, err) {
@@ -91,10 +155,18 @@ var TodoContainer = React.createClass({
     }
 });
 React.renderComponent(
+        <User
+    person="person"
+    setusername="setusername"
+    pollInterval={2000}
+        />,
+    document.getElementById("user")
+);
+React.renderComponent(
         <TodoContainer
     addtask="addtask"
     tasks="tasks"
     pollInterval={2000}
         />,
-    document.getElementById("content")
+    document.getElementById("tasks")
 );

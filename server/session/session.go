@@ -45,7 +45,18 @@ func (s Session) Run() {
 			s.sessions[i] = &engine.Person{}
 		case set := <-s.Set:
 			p := engine.PersonStore[set.Name]
-			if p != nil {
+			if p == nil &&
+				s.sessions[set.SessionID].Name == "" {
+				// when person does not exist
+				// and the session's name has not been set
+				person := s.sessions[set.SessionID]
+				engine.PersonStore[set.Name] = person
+				person.Name = set.Name
+			} else if p == nil {
+				person := &engine.Person{Name: set.Name}
+				s.sessions[set.SessionID] = person
+				engine.PersonStore[set.Name] = person
+			} else {
 				s.sessions[set.SessionID] = p
 			}
 		case i := <-s.Get:
