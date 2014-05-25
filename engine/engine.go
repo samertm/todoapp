@@ -1,7 +1,6 @@
 package engine
 
 import (
-	_ "encoding/json"
 	"time"
 )
 
@@ -16,11 +15,11 @@ type Task struct {
 type Person struct {
 	Name        string `json:"name"`
 	GoalMinutes int    `json:"goalminutes"`
-	Done        []Task `json:"done"`
+	Tasks        []Task `json:"done"`
 }
 
-type PersonStore map[string]Person
-
+var PersonStore = make(map[string]*Person)
+	
 func NewTask(status, name string) Task {
 	return Task{Status: status, Name: name}
 }

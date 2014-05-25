@@ -1,22 +1,17 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	_ "time"
-	_ "crypto/rand"
-	_ "math/big"
-	"encoding/json"
 
 	"github.com/samertm/todoapp/engine"
-	"io"
+	"github.com/samertm/todoapp/server/session"
 )
-
-type session map[string]string
-
-var Session session
 
 func handleHome(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
@@ -24,67 +19,72 @@ func handleHome(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			io.WriteString(w, "WHOOPS")
 		}
-		Session.update(req)
-		if username, ok := Session["username"]; ok {
-			io.WriteString(w, "YOUR USERNAME: " + username)
-		} else {
-			t.Execute(w, nil)
-		}
+		t.Execute(w, nil)
 	}
-}
-
-func (s session) update(req *http.Request) {
-		cookies := req.Cookies()
-		Session = make(map[string]string)
-		for _, c := range cookies {
-			if c.Value != "" {
-				Session[c.Name] = c.Value
-			}
-		}
 }
 
 func handleLogin(w http.ResponseWriter, req *http.Request) {
+	// if req.Method == "POST" {
+	// 	req.ParseForm()
+	// 	form := req.PostForm
+	// 	if len(form["username"]) != 0 {
+	// 		http.SetCookie(w, &http.Cookie{Name: "username", Value: form["username"][0]})
+	// 		io.WriteString(w, form["username"][0])
+	// 	} else {
+	// 		io.WriteString(w, "ney")
+	// 	}
+	// }
+}
+
+func handleAddTask(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		req.ParseForm()
 		form := req.PostForm
-		if len(form["username"]) != 0 {
-			http.SetCookie(w, &http.Cookie{Name: "username", Value: form["username"][0]})
-			io.WriteString(w, form["username"][0])
-		} else {
-			io.WriteString(w, "ney")
+		if len(form["session"]) == 0 ||
+			len(form["todo[status]"]) == 0 ||
+			len(form["todo[name]"]) == 0 {
+			// TODO log error
+			fmt.Println("submission error")
+			return
 		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		t := engine.NewTask(form["todo[status]"][0],
+			form["todo[name]"][0])
+		p.Tasks = append(p.Tasks, t)
 	}
 }
 
-var Todos []engine.Task
-
-func handleTodos(w http.ResponseWriter, req *http.Request) {
-	// start w/ global state
-	if req.Method == "GET" {
-		data, err := json.Marshal(Todos)
+func handleTasks(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 {
+			// TODO log error
+			return
+		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		data, err := json.Marshal(p.Tasks)
 		if err != nil {
 			fmt.Println(err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		io.WriteString(w, string(data))
-	} else if req.Method == "POST" {
-		req.ParseForm()
-		data := req.PostForm
-		if len(data["status"]) != 0 &&
-			len(data["name"]) != 0 {
-			t := engine.NewTask(data["status"][0], data["name"][0])
-			Todos = append(Todos, t)
-		}
 	}
 }
+
+var Session = session.New()
 
 func ListenAndServe(addr string) {
 	port := ":4434"
 	fmt.Print("Listening on " + addr + port + "\n")
 	http.HandleFunc("/", handleHome)
 	http.HandleFunc("/login", handleLogin)
-	http.HandleFunc("/todo.json", handleTodos)
+	http.HandleFunc("/addtask", handleAddTask)
+	http.HandleFunc("/tasks", handleTasks)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
+	go Session.Run()
 	err := http.ListenAndServe(addr+port, nil)
 	if err != nil {
 		log.Fatal("ListenAndServe: ", err)
