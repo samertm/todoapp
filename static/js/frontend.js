@@ -62,21 +62,47 @@ var User = React.createClass({
     }
 });
 var Todo = React.createClass({
+    onDelete: function() {
+        this.props.onDelete({id: this.props.id});
+        return false;
+    },
     render: function() {
         return (
                 <div className="todo">
                 <h2 className="status">
                 {this.props.status}
             </h2>
-                {this.props.children}
+                <p>{this.props.name}</p>
+                <form onSubmit={this.onDelete}>
+                <button>delete</button>
+                </form>
             </div>
         );
     }
 });
 var TodoList = React.createClass({
+    handleDelete: function(id) {
+        $.ajax({
+            url: "task/delete",
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession(), id: id.id},
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
     render: function() {
+        var that = this;
         var todoNodes = this.props.data.map(function (todo) {
-            return <Todo status={todo.status}>{todo.name}</Todo>;
+            return (
+                    <Todo
+                onDelete={that.handleDelete}
+                status={todo.status}
+                name={todo.name}
+                id={todo.id}
+                    />
+            );
         });
         return (
                 <div className="todoList">

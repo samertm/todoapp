@@ -11,6 +11,7 @@ import (
 
 	"github.com/samertm/todoapp/engine"
 	"github.com/samertm/todoapp/server/session"
+	"strconv"
 )
 
 func handleHome(w http.ResponseWriter, req *http.Request) {
@@ -108,6 +109,27 @@ func handleSetUsername(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 ||
+			len(form["id"]) == 0 {
+			fmt.Println("handleTaskDelete error")
+			return
+		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		id, _ := strconv.Atoi(form["id"][0])
+		for i, t := range p.Tasks {
+			if t.Id == id {
+				p.Tasks = append(p.Tasks[:i], p.Tasks[i+1:]...)
+				break
+			}
+		}
+	}
+}
+
 var Session = session.New()
 
 func ListenAndServe(addr string) {
@@ -117,6 +139,7 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/addtask", handleAddTask)
 	http.HandleFunc("/tasks", handleTasks)
+	http.HandleFunc("/task/delete", handleTaskDelete)
 	http.HandleFunc("/person", handlePerson)
 	http.HandleFunc("/setusername", handleSetUsername)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
