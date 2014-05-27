@@ -43,15 +43,16 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 		form := req.PostForm
 		if len(form["session"]) == 0 ||
 			len(form["todo[status]"]) == 0 ||
-			len(form["todo[name]"]) == 0 {
+			len(form["todo[name]"]) == 0 ||
+			len(form["todo[description]"]) == 0 {
 			// TODO log error
-			fmt.Println("submission error")
+			fmt.Println("handleAddTask error")
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		t := engine.NewTask(form["todo[status]"][0],
-			form["todo[name]"][0])
+			form["todo[name]"][0], form["todo[description]"][0])
 		p.Tasks = append(p.Tasks, t)
 	}
 }
@@ -130,6 +131,32 @@ func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 ||
+			len(form["task[id]"]) == 0 ||
+			len(form["task[name]"]) == 0 ||
+			len(form["task[status]"]) == 0 ||
+			len(form["task[description]"]) == 0 {
+			fmt.Println("handleTaskDelete error")
+			return
+		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		id, _ := strconv.Atoi(form["task[id]"][0])
+		for i, _ := range p.Tasks {
+			if p.Tasks[i].Id == id {
+				p.Tasks[i].Name = form["task[name]"][0]
+				p.Tasks[i].Status = form["task[status]"][0]
+				p.Tasks[i].Description = form["task[description]"][0]
+				break
+			}
+		}
+	}
+}
+
 var Session = session.New()
 
 func ListenAndServe(addr string) {
@@ -140,6 +167,7 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/addtask", handleAddTask)
 	http.HandleFunc("/tasks", handleTasks)
 	http.HandleFunc("/task/delete", handleTaskDelete)
+	http.HandleFunc("/task/edit", handleTaskEdit)
 	http.HandleFunc("/person", handlePerson)
 	http.HandleFunc("/setusername", handleSetUsername)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))

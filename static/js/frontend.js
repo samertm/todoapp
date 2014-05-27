@@ -21,7 +21,7 @@ var User = React.createClass({
     },
     handleUserSubmit: function(person) {
         $.ajax({
-            url: this.props.setusername,
+            url: "setusername",
             dataType: 'json',
             type: 'POST',
             data: {session: getSession(), name: person.name},
@@ -32,7 +32,7 @@ var User = React.createClass({
     },
     loadPersonFromServer: function() {
         $.ajax({
-            url: this.props.person,
+            url: "person",
             dataType: 'json',
             type: 'POST',
             data: {session: getSession()},
@@ -62,25 +62,76 @@ var User = React.createClass({
     }
 });
 var Todo = React.createClass({
+    getInitialState: function() {
+        return {showtask: true};
+    },
+    handleCancel: function() {
+        console.log("cancel, yo");
+        return false;
+    },
+    onEdit: function() {
+        this.props.onEdit({id: this.props.id,
+                           name: this.refs.name.getDOMNode().value.trim(),
+                           status: this.refs.status.getDOMNode().value.trim(),
+                           description: this.refs.description.getDOMNode().value.trim()});
+        this.setState({showtask: true});
+        return false;
+    },
+    onEditForm: function() {
+        this.setState({
+            showtask: false
+                      });
+        return false;
+    },
     onDelete: function() {
         this.props.onDelete({id: this.props.id});
         return false;
     },
     render: function() {
-        return (
+        var form = function(that) {
+            return (
+                    <form onSubmit={that.onEdit}>
+                <input type="text" defaultValue={that.props.status} ref="status"/>
+                <input type="text" defaultValue={that.props.name} ref="name" />
+                <input type="text" defaultValue={that.props.description} ref="description" />
+                <input type="submit" value="edit" name="edit" onclick="this.form.submitted=this.value" />
+                    {/*<input type="submit" value="cancel" name="cancel" onclick="this.form.submitted=this.value" />*/}
+            </form>
+        )};
+        var task = function(that) { return (
                 <div className="todo">
                 <h2 className="status">
-                {this.props.status}
+                {that.props.status}
             </h2>
-                <p>{this.props.name}</p>
-                <form onSubmit={this.onDelete}>
+                <p>{that.props.name}</p>
+                <p>{that.props.description}</p>
+                <form onSubmit={that.onEditForm}>
+                <button>edit</button>
+                </form>
+                <form onSubmit={that.onDelete}>
                 <button>delete</button>
                 </form>
-            </div>
-        );
+                </div>
+        )};
+        if (this.state.showtask) {
+            return task(this);
+        } else {
+            return form(this);
+        }
     }
 });
 var TodoList = React.createClass({
+    handleEdit: function(task) {
+        $.ajax({
+            url: "task/edit",
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession(), task: task},
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
     handleDelete: function(id) {
         $.ajax({
             url: "task/delete",
@@ -97,10 +148,12 @@ var TodoList = React.createClass({
         var todoNodes = this.props.data.map(function (todo) {
             return (
                     <Todo
+                onEdit={that.handleEdit}
                 onDelete={that.handleDelete}
                 status={todo.status}
                 name={todo.name}
                 id={todo.id}
+                description={todo.description}
                     />
             );
         });
@@ -115,9 +168,11 @@ var TodoForm = React.createClass({
     handleSubmit: function() {
         var status = this.refs.status.getDOMNode().value.trim();
         var name = this.refs.name.getDOMNode().value.trim();
-        this.props.onTodoSubmit({status: status, name: name});
+        var description = this.refs.description.getDOMNode().value.trim();
+        this.props.onTodoSubmit({status: status, name: name, description: description});
         this.refs.status.getDOMNode().value = '';
         this.refs.name.getDOMNode().value = '';
+        this.refs.description.getDOMNode().value = '';
         return false;
     },
     render: function() {
@@ -125,6 +180,7 @@ var TodoForm = React.createClass({
                 <form className="todoForm" onSubmit={this.handleSubmit}>
                 <input type="text" placeholder="status" ref="status" />
                 <input type="text" placeholder="name" ref="name"/>
+                <input type="text" placeholder="description" ref="description" />
                 <input type="submit" value="add" />
                 </form>
         );
@@ -136,7 +192,7 @@ var TodoContainer = React.createClass({
     },
     loadTodosFromServer: function() {
         $.ajax({
-            url: this.props.tasks,
+            url: "tasks",
             dataType: 'json',
             type: 'POST',
             data: {session: getSession()},
@@ -154,7 +210,7 @@ var TodoContainer = React.createClass({
     },
     handleTodoSubmit: function(todo) {
         $.ajax({
-            url: this.props.addtask,
+            url: "addtask",
             dataType: 'json',
             type: 'POST',
             data: {session: getSession(), todo: todo},
@@ -181,18 +237,10 @@ var TodoContainer = React.createClass({
     }
 });
 React.renderComponent(
-        <User
-    person="person"
-    setusername="setusername"
-    pollInterval={2000}
-        />,
+        <User pollInterval={2000} />,
     document.getElementById("user")
 );
 React.renderComponent(
-        <TodoContainer
-    addtask="addtask"
-    tasks="tasks"
-    pollInterval={2000}
-        />,
+        <TodoContainer pollInterval={2000} />,
     document.getElementById("tasks")
 );
