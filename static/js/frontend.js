@@ -15,9 +15,54 @@ var UserForm = React.createClass({
         );
     }
 });
+var UserTime = React.createClass({
+    getInitialState: function() {
+        return {showtime: true};
+    },
+    onEditButton: function() {
+        this.setState({showtime: false});
+    },
+    onEdit: function() {
+        this.props.onEdit(
+            {goalminutes: this.refs.goalminutes.getDOMNode().value.trim()}
+        );
+        this.setState({showtime: true});
+    },
+    render: function() {
+        var time = function(that) {
+            return (
+                    <span>Goal: {that.props.goalminutes} <button onClick={that.onEditButton}>edit</button> minutes a day.</span>
+            );
+        };
+        var edit = function(that) {
+            return (
+                    <span>Goal: <form>
+                    <input type="text" ref="goalminutes" defaultValue={that.props.goalminutes} />
+                    <button onClick={that.onEdit}>edit</button>
+                    </form> minutes a day.</span>
+            );
+        };
+        if (this.state.showtime) {
+            return time(this);
+        } else {
+            return edit(this);
+        }
+    }
+});
 var User = React.createClass({
     getInitialState: function() {
-        return {person: {name: "nope"}};
+        return {person: {name: "nope", goalminutes: 0}};
+    },
+    handleEditTime: function(time) {
+        $.ajax({
+            url: "person/time/edit",
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession(), goalminutes: time.goalminutes},
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
     },
     handleUserSubmit: function(person) {
         $.ajax({
@@ -38,7 +83,7 @@ var User = React.createClass({
             data: {session: getSession()},
             success: function(person) {
                 if (person.name === "") {
-                    this.setState({person: {name: "no"}});
+                    this.setState({person: {name: "no", goalminutes: 0}});
                 } else {
                     this.setState({person: person});
                 }
@@ -55,7 +100,9 @@ var User = React.createClass({
     render: function() {
         return (
                 <div className="user">
-                <h1>YOUR NAME IS {this.state.person.name}</h1>
+                <h1>
+                YOUR NAME IS {this.state.person.name}. <UserTime goalminutes={this.state.person.goalminutes} onEdit={this.handleEditTime} />
+                </h1>
                 <UserForm onUserSubmit={this.handleUserSubmit} />
             </div>
         );

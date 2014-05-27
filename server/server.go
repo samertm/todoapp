@@ -157,6 +157,23 @@ func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func handlePersonTimeEdit(w http.ResponseWriter, req *http.Request) {
+	if req.Method == "POST" {
+		req.ParseForm()
+		form := req.PostForm
+		if len(form["session"]) == 0 ||
+			len(form["goalminutes"]) == 0 {
+			fmt.Println("handleTaskDelete error")
+			return
+		}
+		Session.Get <- form["session"][0]
+		p := <-Session.Out
+		minutes, _ := strconv.Atoi(form["goalminutes"][0])
+		p.GoalMinutes = minutes
+	}
+}
+
+
 var Session = session.New()
 
 func ListenAndServe(addr string) {
@@ -169,6 +186,7 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/task/delete", handleTaskDelete)
 	http.HandleFunc("/task/edit", handleTaskEdit)
 	http.HandleFunc("/person", handlePerson)
+	http.HandleFunc("/person/time/edit", handlePersonTimeEdit)
 	http.HandleFunc("/setusername", handleSetUsername)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
 	go Session.Run()
