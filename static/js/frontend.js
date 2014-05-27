@@ -134,6 +134,17 @@ var Todo = React.createClass({
         this.props.onDelete({id: this.props.id});
         return false;
     },
+    handleTodoSubmit: function(todo) {
+        $.ajax({
+            url: "addtask",
+            dataType: 'json',
+            type: 'POST',
+            data: {session: getSession(), parentid: this.props.id, todo: todo},
+            error: function(xhr, status, err) {
+                console.error(this.props.url, status, err.toString());
+            }.bind(this)
+        });
+    },
     render: function() {
         var form = function(that) {
             return (
@@ -144,22 +155,39 @@ var Todo = React.createClass({
                     <button onClick={that.onEdit}>edit</button>
                     <button onClick={that.onCancel}>cancel</button>
                     </form>
-        )};
-        var task = function(that) { return (
-                <div className="todo">
-                <h2 className="status">
-                {that.props.status}
-            </h2>
-                <p>{that.props.name}</p>
-                <p>{that.props.description}</p>
-                <form onSubmit={that.onEditForm}>
-                <button>edit</button>
-                </form>
-                <form onSubmit={that.onDelete}>
-                <button>delete</button>
-                </form>
-                </div>
-        )};
+            );
+        };
+        var task = function(that) {
+            // TODO learn jsx & fix hack
+            if (that.props.subtasks == null || that.props.subtasks.length == 0) {
+                return (
+                        <div className="todo">
+                        <h2 className="status">
+                        {that.props.status}
+                    </h2>
+                        <p>{that.props.name}</p>
+                        <p>{that.props.description}</p>
+                        <TodoForm onTodoSubmit={that.handleTodoSubmit} subtask={true} />
+                        <button onClick={that.onEditForm}>edit</button>
+                        <button onClick={that.onDelete}>delete</button>
+                        </div>
+                );
+            } else {
+                return (
+                        <div className="todo">
+                        <h2 className="status">
+                        {that.props.status}
+                    </h2>
+                        <p>{that.props.name}</p>
+                        <p>{that.props.description}</p>
+                        <TodoForm onTodoSubmit={that.handleTodoSubmit} subtask={true} />
+                        <button onClick={that.onEditForm}>edit</button>
+                        <button onClick={that.onDelete}>delete</button>
+                        <TodoList data={that.props.subtasks} />
+                        </div>
+                );
+            }
+        };
         if (this.state.showtask) {
             return task(this);
         } else {
@@ -200,6 +228,7 @@ var TodoList = React.createClass({
                 status={todo.status}
                 name={todo.name}
                 id={todo.id}
+                subtasks={todo.subtasks}
                 description={todo.description}
                     />
             );
@@ -212,7 +241,10 @@ var TodoList = React.createClass({
     }
 });
 var TodoForm = React.createClass({
-    handleSubmit: function() {
+    getInitialState: function() {
+        return {showform: false};
+    },
+    onSubmit: function() {
         var status = this.refs.status.getDOMNode().value.trim();
         var name = this.refs.name.getDOMNode().value.trim();
         var description = this.refs.description.getDOMNode().value.trim();
@@ -220,17 +252,44 @@ var TodoForm = React.createClass({
         this.refs.status.getDOMNode().value = '';
         this.refs.name.getDOMNode().value = '';
         this.refs.description.getDOMNode().value = '';
+        this.setState({showform: false});
+        return false;
+    },
+    onCancel: function() {
+        this.setState({showform: false});
+        return false;
+    },
+    showForm: function() {
+        this.setState({showform: true});
         return false;
     },
     render: function() {
-        return (
-                <form className="todoForm" onSubmit={this.handleSubmit}>
-                <input type="text" placeholder="status" ref="status" />
-                <input type="text" placeholder="name" ref="name"/>
-                <input type="text" placeholder="description" ref="description" />
-                <input type="submit" value="add" />
-                </form>
-        );
+        var form = function(that) {
+            return (
+                    <form className="todoForm">
+                    <input type="text" placeholder="status" ref="status" />
+                    <input type="text" placeholder="name" ref="name"/>
+                    <input type="text" placeholder="description" ref="description" />
+                    <button onClick={that.onSubmit}>add</button>
+                    <button onClick={that.onCancel}>cancel</button>
+                    </form>
+            );
+        };
+        var button = function(that) {
+            var b = function(text) {
+                return (<button onClick={that.showForm}>{text}</button>);
+            };
+            if (that.props.subtask) {
+                return b("add subtask");
+            } else {
+                return b("add task");
+            }
+        }
+        if (this.state.showform) {
+            return form(this);
+        } else {
+            return button(this);
+        }
     }
 });
 var TodoContainer = React.createClass({
@@ -278,7 +337,7 @@ var TodoContainer = React.createClass({
                 <div className="todoContainer">
                 <h1>TODO yer stuffz</h1>
                 <TodoList data={this.state.data}/>
-                <TodoForm onTodoSubmit={this.handleTodoSubmit} />
+                <TodoForm subtask={false} onTodoSubmit={this.handleTodoSubmit} />
             </div>
         );
     }

@@ -53,7 +53,18 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 		p := <-Session.Out
 		t := engine.NewTask(form["todo[status]"][0],
 			form["todo[name]"][0], form["todo[description]"][0])
-		p.Tasks = append(p.Tasks, t)
+		if len(form["parentid"]) != 0 {
+			// attaching a subtask
+			i, _ := strconv.Atoi(form["parentid"][0])
+			parentTask, err := engine.FindTask(p.Tasks, i)
+			if err != nil {
+				// TODO error handling
+				return
+			}
+			parentTask.SubTasks = append(parentTask.SubTasks, &t)
+		} else {
+			p.Tasks = append(p.Tasks, &t)
+		}
 	}
 }
 
