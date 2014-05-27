@@ -112,8 +112,8 @@ var Todo = React.createClass({
     getInitialState: function() {
         return {showtask: true};
     },
-    handleCancel: function() {
-        console.log("cancel, yo");
+    onCancel: function() {
+        this.setState({showtask: true});
         return false;
     },
     onEdit: function() {
@@ -137,13 +137,13 @@ var Todo = React.createClass({
     render: function() {
         var form = function(that) {
             return (
-                    <form onSubmit={that.onEdit}>
-                <input type="text" defaultValue={that.props.status} ref="status"/>
-                <input type="text" defaultValue={that.props.name} ref="name" />
-                <input type="text" defaultValue={that.props.description} ref="description" />
-                <input type="submit" value="edit" name="edit" onclick="this.form.submitted=this.value" />
-                    {/*<input type="submit" value="cancel" name="cancel" onclick="this.form.submitted=this.value" />*/}
-            </form>
+                    <form>
+                    <input type="text" defaultValue={that.props.status} ref="status"/>
+                    <input type="text" defaultValue={that.props.name} ref="name" />
+                    <input type="text" defaultValue={that.props.description} ref="description" />
+                    <button onClick={that.onEdit}>edit</button>
+                    <button onClick={that.onCancel}>cancel</button>
+                    </form>
         )};
         var task = function(that) { return (
                 <div className="todo">
