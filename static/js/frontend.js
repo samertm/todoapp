@@ -110,10 +110,10 @@ var User = React.createClass({
 });
 var Todo = React.createClass({
     getInitialState: function() {
-        return {showtask: true};
+        return {showedit: false};
     },
     onCancel: function() {
-        this.setState({showtask: true});
+        this.setState({showedit: false});
         return false;
     },
     onEdit: function() {
@@ -121,12 +121,12 @@ var Todo = React.createClass({
                            name: this.refs.name.getDOMNode().value.trim(),
                            status: this.refs.status.getDOMNode().value.trim(),
                            description: this.refs.description.getDOMNode().value.trim()});
-        this.setState({showtask: true});
+        this.setState({showedit: false});
         return false;
     },
     onEditForm: function() {
         this.setState({
-            showtask: false
+            showedit: true
                       });
         return false;
     },
@@ -158,40 +158,32 @@ var Todo = React.createClass({
             );
         };
         var task = function(that) {
-            // TODO learn jsx & fix hack
+            // TODO learn jsx & fix hack 
+            var t = <div>
+                <h2 className="status">
+                {that.props.status}
+            </h2>
+                <p>{that.props.name}</p>
+                <p>{that.props.description}</p>
+                <TodoForm onTodoSubmit={that.handleTodoSubmit} subtask={true} />
+                <button onClick={that.onEditForm}>edit</button>
+                <button onClick={that.onDelete}>delete</button>
+                </div>
             if (that.props.subtasks == null || that.props.subtasks.length == 0) {
-                return (
-                        <div className="todo">
-                        <h2 className="status">
-                        {that.props.status}
-                    </h2>
-                        <p>{that.props.name}</p>
-                        <p>{that.props.description}</p>
-                        <TodoForm onTodoSubmit={that.handleTodoSubmit} subtask={true} />
-                        <button onClick={that.onEditForm}>edit</button>
-                        <button onClick={that.onDelete}>delete</button>
-                        </div>
-                );
+                return <div className="todo">{t}</div>;
             } else {
                 return (
                         <div className="todo">
-                        <h2 className="status">
-                        {that.props.status}
-                    </h2>
-                        <p>{that.props.name}</p>
-                        <p>{that.props.description}</p>
-                        <TodoForm onTodoSubmit={that.handleTodoSubmit} subtask={true} />
-                        <button onClick={that.onEditForm}>edit</button>
-                        <button onClick={that.onDelete}>delete</button>
+                        {t}
                         <TodoList data={that.props.subtasks} />
                         </div>
                 );
             }
         };
-        if (this.state.showtask) {
-            return task(this);
-        } else {
+        if (this.state.showedit) {
             return form(this);
+        } else {
+            return task(this);
         }
     }
 });
