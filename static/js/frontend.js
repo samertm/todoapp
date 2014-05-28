@@ -158,7 +158,6 @@ var Todo = React.createClass({
             );
         };
         var task = function(that) {
-            // TODO learn jsx & fix hack 
             var t = <div>
                 <h2 className="status">
                 {that.props.status}
