@@ -2,17 +2,35 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
 	"log"
 	"net/http"
-	_ "time"
+	"net/url"
+	"strconv"
 
 	"github.com/samertm/todoapp/engine"
 	"github.com/samertm/todoapp/server/session"
-	"strconv"
 )
+
+// warning: modifies req by calling req.ParseForm()
+func parseForm(req *http.Request, values ...string) (form url.Values, err error) {
+	req.ParseForm()
+	form = req.PostForm
+	err = checkForm(form, values...)
+	return
+}
+
+func checkForm(data url.Values, values ...string) error {
+	for _, s := range values {
+		if len(data[s]) == 0 {
+			return errors.New(s + " not passed")
+		}
+	}
+	return nil
+}
 
 func handleHome(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "GET" {
@@ -24,36 +42,23 @@ func handleHome(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func handleLogin(w http.ResponseWriter, req *http.Request) {
-	// if req.Method == "POST" {
-	// 	req.ParseForm()
-	// 	form := req.PostForm
-	// 	if len(form["username"]) != 0 {
-	// 		http.SetCookie(w, &http.Cookie{Name: "username", Value: form["username"][0]})
-	// 		io.WriteString(w, form["username"][0])
-	// 	} else {
-	// 		io.WriteString(w, "ney")
-	// 	}
-	// }
-}
-
 func handleAddTask(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 ||
-			len(form["todo[status]"]) == 0 ||
-			len(form["todo[name]"]) == 0 ||
-			len(form["todo[description]"]) == 0 {
+		form, err := parseForm(req,
+			"session",
+			"todo[status]",
+			"todo[name]",
+			"todo[description]")
+		if err != nil {
 			// TODO log error
-			fmt.Println("handleAddTask error")
+			fmt.Println(err)
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		t := engine.NewTask(form["todo[status]"][0],
 			form["todo[name]"][0], form["todo[description]"][0])
-		if len(form["parentid"]) != 0 {
+		if err := checkForm(form, "parentid"); err == nil {
 			// attaching a subtask
 			i, _ := strconv.Atoi(form["parentid"][0])
 			parentTask, err := engine.FindTask(p.Tasks, i)
@@ -70,9 +75,8 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 
 func handleTasks(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 {
+		form, err := parseForm(req, "session")
+		if err != nil {
 			// TODO log error
 			return
 		}
@@ -89,9 +93,8 @@ func handleTasks(w http.ResponseWriter, req *http.Request) {
 
 func handlePerson(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 {
+		form, err := parseForm(req, "session")
+		if err != nil {
 			// TODO log error
 			fmt.Println("handlePerson error")
 			return
@@ -109,10 +112,8 @@ func handlePerson(w http.ResponseWriter, req *http.Request) {
 
 func handleSetUsername(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 ||
-			len(form["name"]) == 0 {
+		form, err := parseForm(req, "session", "name")
+		if err != nil {
 			// TODO log error
 			fmt.Println("handleSetUsername error")
 			return
@@ -123,10 +124,8 @@ func handleSetUsername(w http.ResponseWriter, req *http.Request) {
 
 func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 ||
-			len(form["id"]) == 0 {
+		form, err := parseForm(req, "session", "id")
+		if err != nil {
 			fmt.Println("handleTaskDelete error")
 			return
 		}
@@ -144,13 +143,13 @@ func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
 
 func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 ||
-			len(form["task[id]"]) == 0 ||
-			len(form["task[name]"]) == 0 ||
-			len(form["task[status]"]) == 0 ||
-			len(form["task[description]"]) == 0 {
+		form, err := parseForm(req,
+			"session",
+			"task[id]",
+			"task[name]",
+			"task[status]",
+			"task[description]")
+		if err != nil {
 			fmt.Println("handleTaskDelete error")
 			return
 		}
@@ -170,10 +169,8 @@ func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
 
 func handlePersonTimeEdit(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
-		req.ParseForm()
-		form := req.PostForm
-		if len(form["session"]) == 0 ||
-			len(form["goalminutes"]) == 0 {
+		form, err := parseForm(req, "session", "goalminutes")
+		if err != nil {
 			fmt.Println("handleTaskDelete error")
 			return
 		}
@@ -184,14 +181,8 @@ func handlePersonTimeEdit(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-
-var Session = session.New()
-
-func ListenAndServe(addr string) {
-	port := ":4434"
-	fmt.Print("Listening on " + addr + port + "\n")
+func setHandlers() {
 	http.HandleFunc("/", handleHome)
-	http.HandleFunc("/login", handleLogin)
 	http.HandleFunc("/addtask", handleAddTask)
 	http.HandleFunc("/tasks", handleTasks)
 	http.HandleFunc("/task/delete", handleTaskDelete)
@@ -199,7 +190,17 @@ func ListenAndServe(addr string) {
 	http.HandleFunc("/person", handlePerson)
 	http.HandleFunc("/person/time/edit", handlePersonTimeEdit)
 	http.HandleFunc("/setusername", handleSetUsername)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static/"))))
+	http.Handle("/static/",
+		http.StripPrefix("/static/",
+			http.FileServer(http.Dir("./static/"))))
+}
+
+var Session = session.New()
+
+func ListenAndServe(addr string) {
+	port := ":4434"
+	fmt.Print("Listening on " + addr + port + "\n")
+	setHandlers()
 	go Session.Run()
 	err := http.ListenAndServe(addr+port, nil)
 	if err != nil {
