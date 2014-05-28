@@ -60,10 +60,16 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 			form["todo[name]"][0], form["todo[description]"][0])
 		if err := checkForm(form, "parentid"); err == nil {
 			// attaching a subtask
-			i, _ := strconv.Atoi(form["parentid"][0])
+			i, err := strconv.Atoi(form["parentid"][0])
+			if err != nil {
+				// TODO log errors
+				fmt.Println(err)
+				return
+			}
 			parentTask, err := engine.FindTask(p.Tasks, i)
 			if err != nil {
 				// TODO error handling
+				fmt.Println(err)
 				return
 			}
 			parentTask.SubTasks = append(parentTask.SubTasks, &t)
@@ -131,7 +137,12 @@ func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
-		id, _ := strconv.Atoi(form["id"][0])
+		id, err := strconv.Atoi(form["id"][0])
+		if err != nil {
+			// TODO error handling
+			fmt.Println(err)
+			return
+		}
 		for i, t := range p.Tasks {
 			if t.Id == id {
 				p.Tasks = append(p.Tasks[:i], p.Tasks[i+1:]...)
@@ -155,7 +166,12 @@ func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
-		id, _ := strconv.Atoi(form["task[id]"][0])
+		id, err := strconv.Atoi(form["task[id]"][0])
+		if err != nil {
+			// TODO error handling
+			fmt.Println(err)
+			return
+		}
 		for i, _ := range p.Tasks {
 			if p.Tasks[i].Id == id {
 				p.Tasks[i].Name = form["task[name]"][0]
@@ -176,7 +192,12 @@ func handlePersonTimeEdit(w http.ResponseWriter, req *http.Request) {
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
-		minutes, _ := strconv.Atoi(form["goalminutes"][0])
+		minutes, err := strconv.Atoi(form["goalminutes"][0])
+		if err != nil {
+			// TODO log error
+			fmt.Println(err)
+			return
+		}
 		p.GoalMinutes = minutes
 	}
 }
