@@ -50,8 +50,7 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 			"todo[name]",
 			"todo[description]")
 		if err != nil {
-			// TODO log error
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		Session.Get <- form["session"][0]
@@ -62,14 +61,12 @@ func handleAddTask(w http.ResponseWriter, req *http.Request) {
 			// attaching a subtask
 			i, err := strconv.Atoi(form["parentid"][0])
 			if err != nil {
-				// TODO log errors
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 			parentTask, err := engine.FindTask(p.Tasks, i)
 			if err != nil {
-				// TODO error handling
-				fmt.Println(err)
+				log.Println(err)
 				return
 			}
 			parentTask.SubTasks = append(parentTask.SubTasks, &t)
@@ -83,14 +80,14 @@ func handleTasks(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		form, err := parseForm(req, "session")
 		if err != nil {
-			// TODO log error
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		data, err := json.Marshal(p.Tasks)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
+			return
 		}
 		w.Header().Set("Content-Type", "application/json")
 		io.WriteString(w, string(data))
@@ -101,15 +98,14 @@ func handlePerson(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		form, err := parseForm(req, "session")
 		if err != nil {
-			// TODO log error
-			fmt.Println("handlePerson error")
+			log.Println("handlePerson error")
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		data, err := json.Marshal(p)
 		if err != nil {
-			fmt.Println(err)
+			log.Println(err)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		io.WriteString(w, string(data))
@@ -120,8 +116,7 @@ func handleSetUsername(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		form, err := parseForm(req, "session", "name")
 		if err != nil {
-			// TODO log error
-			fmt.Println("handleSetUsername error")
+			log.Println("handleSetUsername error")
 			return
 		}
 		Session.Set <- session.Set{form["session"][0], form["name"][0]}
@@ -132,15 +127,14 @@ func handleTaskDelete(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		form, err := parseForm(req, "session", "id")
 		if err != nil {
-			fmt.Println("handleTaskDelete error")
+			log.Println("handleTaskDelete error")
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		id, err := strconv.Atoi(form["id"][0])
 		if err != nil {
-			// TODO error handling
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		for i, t := range p.Tasks {
@@ -161,15 +155,14 @@ func handleTaskEdit(w http.ResponseWriter, req *http.Request) {
 			"task[status]",
 			"task[description]")
 		if err != nil {
-			fmt.Println("handleTaskDelete error")
+			log.Println("handleTaskDelete error")
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		id, err := strconv.Atoi(form["task[id]"][0])
 		if err != nil {
-			// TODO error handling
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		for i, _ := range p.Tasks {
@@ -187,15 +180,14 @@ func handlePersonTimeEdit(w http.ResponseWriter, req *http.Request) {
 	if req.Method == "POST" {
 		form, err := parseForm(req, "session", "goalminutes")
 		if err != nil {
-			fmt.Println("handleTaskDelete error")
+			log.Println("handleTaskDelete error")
 			return
 		}
 		Session.Get <- form["session"][0]
 		p := <-Session.Out
 		minutes, err := strconv.Atoi(form["goalminutes"][0])
 		if err != nil {
-			// TODO log error
-			fmt.Println(err)
+			log.Println(err)
 			return
 		}
 		p.GoalMinutes = minutes
